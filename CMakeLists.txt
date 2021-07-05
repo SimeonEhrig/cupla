@@ -47,6 +47,12 @@ project(cupla VERSION      ${CUPLA_VERSION_MAJOR}.${CUPLA_VERSION_MINOR}.${CUPLA
 include(GNUInstallDirs)
 
 ################################################################################
+# cupla options
+################################################################################
+
+option(CUPLA_STREAM_ASYNC_ENABLE "Enable asynchronous streams" ON)
+
+################################################################################
 # setup alpaka
 ################################################################################
 
@@ -74,129 +80,59 @@ if(NOT TARGET alpaka::alpaka)
 endif()
 
 ################################################################################
-# Directory of this file.
-################################################################################
-set(_cupla_ROOT_DIR ${CMAKE_CURRENT_LIST_DIR})
-
-# Normalize the path (e.g. remove ../)
-get_filename_component(_cupla_ROOT_DIR "${_cupla_ROOT_DIR}" ABSOLUTE)
-
-# Add cupla_ADD_EXECUTABLE function.
-set(_cupla_ADD_EXECUTABLE_FILE "${_cupla_ROOT_DIR}/cmake/addExecutable.cmake")
-include("${_cupla_ADD_EXECUTABLE_FILE}")
-
-
-################################################################################
-# Compiler settings.
-################################################################################
-if(MSVC)
-    # Empty append to define it if it does not already exist.
-    list(APPEND _cupla_COMPILE_OPTIONS_PUBLIC)
-else()
-    # GNU
-    if(CMAKE_COMPILER_IS_GNUCXX)
-        list(APPEND _cupla_COMPILE_OPTIONS_PUBLIC "-Wall")
-        list(APPEND _cupla_COMPILE_OPTIONS_PUBLIC "-Wextra")
-        list(APPEND _cupla_COMPILE_OPTIONS_PUBLIC "-Wno-unknown-pragmas")
-        list(APPEND _cupla_COMPILE_OPTIONS_PUBLIC "-Wno-unused-parameter")
-        list(APPEND _cupla_COMPILE_OPTIONS_PUBLIC "-Wno-unused-local-typedefs")
-        list(APPEND _cupla_COMPILE_OPTIONS_PUBLIC "-Wno-attributes")
-        list(APPEND _cupla_COMPILE_OPTIONS_PUBLIC "-Wno-reorder")
-        list(APPEND _cupla_COMPILE_OPTIONS_PUBLIC "-Wno-sign-compare")
-    # ICC
-    elseif(${CMAKE_CXX_COMPILER_ID} STREQUAL "Intel")
-        list(APPEND _cupla_COMPILE_OPTIONS_PUBLIC "-Wall")
-    # PGI
-    elseif(${CMAKE_CXX_COMPILER_ID} STREQUAL "PGI")
-        list(APPEND _cupla_COMPILE_OPTIONS_PUBLIC "-Minform=inform")
-    endif()
-endif()
-
-################################################################################
-# cupla.
-################################################################################
-
-option(CUPLA_STREAM_ASYNC_ENABLE "Enable asynchronous streams" ON)
-if(CUPLA_STREAM_ASYNC_ENABLE)
-    list(APPEND _cupla_COMPILE_DEFINITIONS_PUBLIC "CUPLA_STREAM_ASYNC_ENABLED=1")
-else()
-    list(APPEND _cupla_COMPILE_DEFINITIONS_PUBLIC "CUPLA_STREAM_ASYNC_ENABLED=0")
-endif()
-
-set(_cupla_INCLUDE_DIR "${_cupla_ROOT_DIR}/include")
-list(APPEND _cupla_INCLUDE_DIRECTORIES_PUBLIC ${_cupla_INCLUDE_DIR})
-set(_cupla_SUFFIXED_INCLUDE_DIR "${_cupla_INCLUDE_DIR}")
-
-set(_cupla_SOURCE_DIR "${_cupla_ROOT_DIR}/src")
-list(APPEND _cupla_SOURCE_DIRECTORIES_PUBLIC ${_cupla_SOURCE_DIR})
-set(_cupla_SUFFIXED_SOURCE_DIR "${_cupla_SOURCE_DIR}")
-
-set(_cupla_LINK_LIBRARY)
-list(APPEND _cupla_LINK_LIBRARIES_PUBLIC ${_cupla_LINK_LIBRARY})
-
-set(_cupla_FILES_OTHER "${_cupla_ROOT_DIR}/Findcupla.cmake" "${_cupla_ROOT_DIR}/cuplaConfig.cmake")
-
-# Add all the include files in all recursive subdirectories and group them accordingly.
-append_recursive_files_add_to_src_group("${_cupla_SUFFIXED_INCLUDE_DIR}" "${_cupla_SUFFIXED_INCLUDE_DIR}" "hpp" _cupla_FILES_HEADER)
-append_recursive_files_add_to_src_group("${_cupla_SUFFIXED_INCLUDE_DIR}" "${_cupla_SUFFIXED_INCLUDE_DIR}" "h" _cupla_FILES_HEADER)
-
-append_recursive_files_add_to_src_group("${_cupla_SUFFIXED_SOURCE_DIR}" "${_cupla_SUFFIXED_SOURCE_DIR}" "cpp" _cupla_FILES_SOURCE)
-
-
-################################################################################
 # cupla Target.
 ################################################################################
 
+include("${CMAKE_CURRENT_LIST_DIR}/cmake/addExecutable.cmake")
+
 alpaka_add_library(
-    "cupla"
-    ${_cupla_FILES_HEADER} ${_cupla_FILES_OTHER} ${_cupla_FILES_SOURCE})
+    ${PROJECT_NAME}
+    ${PROJECT_SOURCE_DIR}/src/manager/Driver.cpp
+    ${PROJECT_SOURCE_DIR}/src/common.cpp
+    ${PROJECT_SOURCE_DIR}/src/device.cpp
+    ${PROJECT_SOURCE_DIR}/src/event.cpp
+    ${PROJECT_SOURCE_DIR}/src/memory.cpp
+    ${PROJECT_SOURCE_DIR}/src/stream.cpp
+    )
+
+target_include_directories(${PROJECT_NAME}
+  PUBLIC
+  $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>)
 
 # Even if there are no sources CMAKE has to know the language.
-set_target_properties("cupla" PROPERTIES LINKER_LANGUAGE CXX)
-
-# Compile options.
-message(STATUS "_cupla_COMPILE_OPTIONS_PUBLIC: ${_cupla_COMPILE_OPTIONS_PUBLIC}")
-list(
-    LENGTH
-    _cupla_COMPILE_OPTIONS_PUBLIC
-    _cupla_COMPILE_OPTIONS_PUBLIC_LENGTH)
-if("${_cupla_COMPILE_OPTIONS_PUBLIC_LENGTH}")
-    TARGET_COMPILE_OPTIONS(
-        "cupla"
-        PUBLIC ${_cupla_COMPILE_OPTIONS_PUBLIC})
-endif()
-
-# Compile definitions.
-message(STATUS "_cupla_COMPILE_DEFINITIONS_PUBLIC: ${_cupla_COMPILE_DEFINITIONS_PUBLIC}")
-list(
-    LENGTH
-    _cupla_COMPILE_DEFINITIONS_PUBLIC
-    _cupla_COMPILE_DEFINITIONS_PUBLIC_LENGTH)
-if("${_cupla_COMPILE_DEFINITIONS_PUBLIC_LENGTH}")
-    TARGET_COMPILE_DEFINITIONS(
-        "cupla"
-        PUBLIC ${_cupla_COMPILE_DEFINITIONS_PUBLIC})
-endif()
-
-# Include directories.
-message(STATUS "_cupla_INCLUDE_DIRECTORIES_PUBLIC: ${_cupla_INCLUDE_DIRECTORIES_PUBLIC}")
-list(
-    LENGTH
-    _cupla_INCLUDE_DIRECTORIES_PUBLIC
-    _cupla_INCLUDE_DIRECTORIES_PUBLIC_LENGTH)
-if("${_cupla_INCLUDE_DIRECTORIES_PUBLIC_LENGTH}")
-    TARGET_INCLUDE_DIRECTORIES(
-        "cupla"
-        PUBLIC ${_cupla_INCLUDE_DIRECTORIES_PUBLIC})
-endif()
-
-# Link libraries.
-message(STATUS "_cupla_LINK_LIBRARIES_PUBLIC: ${_cupla_LINK_LIBRARIES_PUBLIC}")
+set_target_properties(${PROJECT_NAME} PROPERTIES LINKER_LANGUAGE CXX)
 
 target_link_libraries(
-    "cupla"
-    PUBLIC alpaka::alpaka ${_cupla_LINK_LIBRARIES_PUBLIC})
+    ${PROJECT_NAME}
+    PUBLIC
+    alpaka::alpaka)
 
+if(CUPLA_STREAM_ASYNC_ENABLE)
+    TARGET_COMPILE_DEFINITIONS(${PROJECT_NAME} PUBLIC "CUPLA_STREAM_ASYNC_ENABLED=1")
+else()
+    TARGET_COMPILE_DEFINITIONS(${PROJECT_NAME} PUBLIC "CUPLA_STREAM_ASYNC_ENABLED=0")
+endif()
+
+# GNU
+if(CMAKE_COMPILER_IS_GNUCXX)
+  TARGET_COMPILE_OPTIONS(${PROJECT_NAME}
+    PUBLIC
+    "-Wall"
+    "-Wextra"
+    "-Wno-unknown-pragmas"
+    "-Wno-unused-parameter"
+    "-Wno-unused-local-typedefs"
+    "-Wno-attributes"
+    "-Wno-reorder"
+    "-Wno-sign-compare")
+# ICC
+elseif(${CMAKE_CXX_COMPILER_ID} STREQUAL "Intel")
+  TARGET_COMPILE_OPTIONS(${PROJECT_NAME} PUBLIC "-Wall")
+# PGI
+elseif(${CMAKE_CXX_COMPILER_ID} STREQUAL "PGI")
+  TARGET_COMPILE_OPTIONS(${PROJECT_NAME} PUBLIC "-Minform=inform")
+endif()
 
 ################################################################################
 # add examples
