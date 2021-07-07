@@ -56,83 +56,51 @@ option(CUPLA_STREAM_ASYNC_ENABLE "Enable asynchronous streams" ON)
 # setup alpaka
 ################################################################################
 
-set(cupla_ALPAKA_PROVIDER "intern" CACHE STRING "Select which alpaka is used")
-set_property(CACHE cupla_ALPAKA_PROVIDER PROPERTY STRINGS "intern;extern")
-mark_as_advanced(cupla_ALPAKA_PROVIDER)
+# the min and max. supported alpaka version is also copied to the cuplaConfig.cmake
+set(_CUPLA_MIN_ALPAKA_VERSION 0.6.0)
+set(_CUPLA_UNSUPPORTED_ALPAKA_VERSION 0.7.0)
 
-if(${cupla_ALPAKA_PROVIDER} STREQUAL "intern")
+# the alpaka provider for the internal alpaka is only available,
+# if cupla is used via add_subdirectory in another project
+if(NOT ${CMAKE_PROJECT_NAME} STREQUAL ${PROJECT_NAME})
+  set(cupla_ALPAKA_PROVIDER "intern" CACHE STRING "Select which alpaka is used")
+  set_property(CACHE cupla_ALPAKA_PROVIDER PROPERTY STRINGS "intern;extern")
+  mark_as_advanced(cupla_ALPAKA_PROVIDER)
+
+  if(${cupla_ALPAKA_PROVIDER} STREQUAL "intern")
     set(alpaka_BUILD_EXAMPLES OFF)
     set(BUILD_TESTING OFF)
     add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/alpaka)
-else()
-    set(_cupla_MIN_ALPAKA_VERSION 0.6.0)
-    set(_cupla_UNSUPPORTED_ALPAKA_VERSION 0.7.0)
-    find_package(alpaka REQUIRED ${_cupla_MIN_ALPAKA_VERSION} HINTS $ENV{ALPAKA_ROOT})
+  else()
+    find_package(alpaka ${_CUPLA_MIN_ALPAKA_VERSION} REQUIRED HINTS $ENV{ALPAKA_ROOT})
 
-    if(alpaka_VERSION VERSION_GREATER_EQUAL _cupla_UNSUPPORTED_ALPAKA_VERSION)
+    if(alpaka_VERSION VERSION_GREATER_EQUAL _CUPLA_UNSUPPORTED_ALPAKA_VERSION)
         message(WARNING "Unsupported alpaka version ${alpaka_VERSION}. "
-                "Supported versions [${_cupla_MIN_ALPAKA_VERSION},${_cupla_UNSUPPORTED_ALPAKA_VERSION}).")
+                "Supported versions [${_CUPLA_MIN_ALPAKA_VERSION},${_CUPLA_UNSUPPORTED_ALPAKA_VERSION}).")
     endif()
-endif()
+  endif()
 
-if(NOT TARGET alpaka::alpaka)
-    message(ERROR "Required cupla dependency alpaka could not be found!")
+  if(NOT TARGET alpaka::alpaka)
+    message(FATAL_ERROR "Required cupla dependency alpaka could not be found!")
+  endif()
 endif()
 
 ################################################################################
 # cupla Target.
 ################################################################################
 
-include("${CMAKE_CURRENT_LIST_DIR}/cmake/addExecutable.cmake")
+# create cupla target only if the cupla is used via add_subdirectory
+# for the explanation please have a look in the cuplaConfig.cmake.in
+if(NOT ${CMAKE_PROJECT_NAME} STREQUAL ${PROJECT_NAME})
+  include("${CMAKE_CURRENT_LIST_DIR}/cmake/addExecutable.cmake")
+  include("${CMAKE_CURRENT_LIST_DIR}/cmake/cuplaTargetHelper.cmake")
 
-alpaka_add_library(
-    ${PROJECT_NAME}
-    ${PROJECT_SOURCE_DIR}/src/manager/Driver.cpp
-    ${PROJECT_SOURCE_DIR}/src/common.cpp
-    ${PROJECT_SOURCE_DIR}/src/device.cpp
-    ${PROJECT_SOURCE_DIR}/src/event.cpp
-    ${PROJECT_SOURCE_DIR}/src/memory.cpp
-    ${PROJECT_SOURCE_DIR}/src/stream.cpp
+  createCuplaTarget(${PROJECT_NAME}
+    ${PROJECT_SOURCE_DIR}/include # include directory path
+    ${PROJECT_SOURCE_DIR}/src # src directory path
     )
-
-target_include_directories(${PROJECT_NAME}
-  PUBLIC
-  $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
-  $<INSTALL_INTERFACE:include>)
-
-# Even if there are no sources CMAKE has to know the language.
-set_target_properties(${PROJECT_NAME} PROPERTIES LINKER_LANGUAGE CXX)
-
-target_link_libraries(
-    ${PROJECT_NAME}
-    PUBLIC
-    alpaka::alpaka)
-
-if(CUPLA_STREAM_ASYNC_ENABLE)
-    TARGET_COMPILE_DEFINITIONS(${PROJECT_NAME} PUBLIC "CUPLA_STREAM_ASYNC_ENABLED=1")
-else()
-    TARGET_COMPILE_DEFINITIONS(${PROJECT_NAME} PUBLIC "CUPLA_STREAM_ASYNC_ENABLED=0")
 endif()
 
-# GNU
-if(CMAKE_COMPILER_IS_GNUCXX)
-  TARGET_COMPILE_OPTIONS(${PROJECT_NAME}
-    PUBLIC
-    "-Wall"
-    "-Wextra"
-    "-Wno-unknown-pragmas"
-    "-Wno-unused-parameter"
-    "-Wno-unused-local-typedefs"
-    "-Wno-attributes"
-    "-Wno-reorder"
-    "-Wno-sign-compare")
-# ICC
-elseif(${CMAKE_CXX_COMPILER_ID} STREQUAL "Intel")
-  TARGET_COMPILE_OPTIONS(${PROJECT_NAME} PUBLIC "-Wall")
-# PGI
-elseif(${CMAKE_CXX_COMPILER_ID} STREQUAL "PGI")
-  TARGET_COMPILE_OPTIONS(${PROJECT_NAME} PUBLIC "-Minform=inform")
-endif()
 
 ################################################################################
 # add examples
@@ -145,16 +113,36 @@ endif()
 #endif()
 
 ################################################################################
-# cuplaConfig.cmake, cuplaConfigVersion.cmake and cuplaTargest.cmake
+# install cupla
 ################################################################################
 
-include(CMakePackageConfigHelpers)
+if(${CMAKE_PROJECT_NAME} STREQUAL ${PROJECT_NAME})
+  include(CMakePackageConfigHelpers)
 
-write_basic_package_version_file("${PROJECT_NAME}ConfigVersion.cmake"
-                                 VERSION ${PROJECT_VERSION}
-                                 COMPATIBILITY SameMajorVersion)
+  set(_CUPLA_INSTALL_CMAKEDIR "${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}")
+  set(_CUPLA_SOURCE_CMAKEDIR "${PROJECT_SOURCE_DIR}/cmake/")
 
-configure_package_config_file(
-  "${PROJECT_SOURCE_DIR}/cmake/${PROJECT_NAME}Config.cmake.in"
-  "${PROJECT_BINARY_DIR}/${PROJECT_NAME}Config.cmake"
-  INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/cupla)
+  write_basic_package_version_file("${PROJECT_NAME}ConfigVersion.cmake"
+    VERSION ${PROJECT_VERSION}
+    COMPATIBILITY SameMajorVersion)
+
+  configure_package_config_file(
+    "${_CUPLA_SOURCE_CMAKEDIR}/${PROJECT_NAME}Config.cmake.in"
+    "${PROJECT_BINARY_DIR}/${PROJECT_NAME}Config.cmake"
+    INSTALL_DESTINATION ${_CUPLA_INSTALL_CMAKEDIR}
+    PATH_VARS _CUPLA_MIN_ALPAKA_VERSION _CUPLA_UNSUPPORTED_ALPAKA_VERSION)
+
+  install(FILES "${PROJECT_BINARY_DIR}/${PROJECT_NAME}Config.cmake"
+    "${PROJECT_BINARY_DIR}/${PROJECT_NAME}ConfigVersion.cmake"
+    DESTINATION ${_CUPLA_INSTALL_CMAKEDIR})
+
+  install(FILES "${_CUPLA_SOURCE_CMAKEDIR}/addExecutable.cmake"
+    "${_CUPLA_SOURCE_CMAKEDIR}/cuplaTargetHelper.cmake"
+    DESTINATION ${_CUPLA_INSTALL_CMAKEDIR})
+
+  install(DIRECTORY ${PROJECT_SOURCE_DIR}/include/ DESTINATION include)
+  # copy source files instead compiled library
+  # this is necessary because some functions use the ACC as a template parameter,
+  # but the ACC is not defined at the install time of cupla
+  install(DIRECTORY ${PROJECT_SOURCE_DIR}/src/ DESTINATION src/cupla)
+endif()
