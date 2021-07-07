@@ -1,5 +1,5 @@
 #
-# Copyright 2016 Rene Widera, Benjamin Worpitz, Simeon Ehrig
+# Copyright 2016-2021 Rene Widera, Benjamin Worpitz, Simeon Ehrig
 #
 # This file is part of cupla.
 #
@@ -63,11 +63,11 @@ set(_CUPLA_UNSUPPORTED_ALPAKA_VERSION 0.7.0)
 # the alpaka provider for the internal alpaka is only available,
 # if cupla is used via add_subdirectory in another project
 if(NOT ${CMAKE_PROJECT_NAME} STREQUAL ${PROJECT_NAME})
-  set(cupla_ALPAKA_PROVIDER "intern" CACHE STRING "Select which alpaka is used")
-  set_property(CACHE cupla_ALPAKA_PROVIDER PROPERTY STRINGS "intern;extern")
+  set(cupla_ALPAKA_PROVIDER "internal" CACHE STRING "Select which alpaka is used")
+  set_property(CACHE cupla_ALPAKA_PROVIDER PROPERTY STRINGS "internal;external")
   mark_as_advanced(cupla_ALPAKA_PROVIDER)
 
-  if(${cupla_ALPAKA_PROVIDER} STREQUAL "intern")
+  if(${cupla_ALPAKA_PROVIDER} STREQUAL "internal")
     set(alpaka_BUILD_EXAMPLES OFF)
     set(BUILD_TESTING OFF)
     add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/alpaka)
