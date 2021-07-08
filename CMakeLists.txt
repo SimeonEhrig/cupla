@@ -22,7 +22,7 @@
 # Required cmake version.
 ################################################################################
 
-cmake_minimum_required(VERSION 3.18.0)
+cmake_minimum_required(VERSION 3.19.0)
 
 ################################################################################
 # Setup project information
@@ -51,6 +51,7 @@ include(GNUInstallDirs)
 ################################################################################
 
 option(CUPLA_STREAM_ASYNC_ENABLE "Enable asynchronous streams" ON)
+option(cupla_BUILD_EXAMPLES "Build examples" OFF)
 
 ################################################################################
 # setup alpaka
@@ -62,7 +63,8 @@ set(_CUPLA_UNSUPPORTED_ALPAKA_VERSION 0.7.0)
 
 # the alpaka provider for the internal alpaka is only available,
 # if cupla is used via add_subdirectory in another project
-if(NOT ${CMAKE_PROJECT_NAME} STREQUAL ${PROJECT_NAME})
+# or examples are build
+if(cupla_BUILD_EXAMPLES OR (NOT ${CMAKE_PROJECT_NAME} STREQUAL ${PROJECT_NAME}))
   set(cupla_ALPAKA_PROVIDER "internal" CACHE STRING "Select which alpaka is used")
   set_property(CACHE cupla_ALPAKA_PROVIDER PROPERTY STRINGS "internal;external")
   mark_as_advanced(cupla_ALPAKA_PROVIDER)
@@ -90,8 +92,9 @@ endif()
 ################################################################################
 
 # create cupla target only if the cupla is used via add_subdirectory
+# or examples are build
 # for the explanation please have a look in the cuplaConfig.cmake.in
-if(NOT ${CMAKE_PROJECT_NAME} STREQUAL ${PROJECT_NAME})
+if(cupla_BUILD_EXAMPLES OR (NOT ${CMAKE_PROJECT_NAME} STREQUAL ${PROJECT_NAME}))
   include("${CMAKE_CURRENT_LIST_DIR}/cmake/addExecutable.cmake")
   include("${CMAKE_CURRENT_LIST_DIR}/cmake/cuplaTargetHelper.cmake")
 
@@ -106,11 +109,9 @@ endif()
 # add examples
 ################################################################################
 
-#option(cupla_BUILD_EXAMPLES "Build examples" OFF)
-
-#if(cupla_BUILD_EXAMPLES)
-  #add_subdirectory(example/)
-#endif()
+if(cupla_BUILD_EXAMPLES)
+  add_subdirectory(example/)
+endif()
 
 ################################################################################
 # install cupla
