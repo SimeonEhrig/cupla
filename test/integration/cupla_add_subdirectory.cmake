@@ -18,7 +18,7 @@
 # If not, see <http://www.gnu.org/licenses/>.
 #
 
-cmake_minimum_required(VERSION 3.19.0)
+cmake_minimum_required(VERSION 3.18.0)
 project(cuplaVectorAdd)
 
 add_subdirectory(cupla)
@@ -26,8 +26,3 @@ add_subdirectory(cupla)
 cupla_add_executable(${PROJECT_NAME} ${CMAKE_CURRENT_LIST_DIR}/vectorAdd.cpp)
 
 install(TARGETS ${PROJECT_NAME})
-
-# install cupla library only, if it a shared library
-if(BUILD_SHARED_LIBS)
-  install(TARGETS cupla)
-endif()

@@ -26,6 +26,7 @@ macro(createCuplaTarget
     )
   alpaka_add_library(
     ${TARGET_NAME}
+    STATIC
     ${_CUPLA_SRC_DIR}/manager/Driver.cpp
     ${_CUPLA_SRC_DIR}/common.cpp
     ${_CUPLA_SRC_DIR}/device.cpp

@@ -3,7 +3,7 @@
 ## Requirements
 
 
-- **cmake**  3.19.0 or higher
+- **cmake**  3.18.0 or higher
   - *Debian/Ubuntu:* `sudo apt-get install cmake file cmake-curses-gui`
   - *Arch Linux:* `sudo pacman --sync cmake`
 
@@ -75,7 +75,7 @@ cmake .. -Dcupla_BUILD_EXAMPLES=ON -Dcupla_ALPAKA_PROVIDER="external"
 If cupla is installed, you can use it via `find_package()` in your project:
 
 ```cmake
-cmake_minimum_required(VERSION 3.19.0)
+cmake_minimum_required(VERSION 3.18.0)
 project(exampleProject)
 
 find_package(cupla)
@@ -88,7 +88,7 @@ cupla_add_executable(${PROJECT_NAME} main.cpp)
 For the method `add_subdirectory()` you have to copy the `cupla` project folder into your project. After that you can add `cupla` to your project and use it.
 
 ```cmake
-cmake_minimum_required(VERSION 3.19.0)
+cmake_minimum_required(VERSION 3.18.0)
 project(exampleProject)
 
 # requires, that cupla is located in the root directory of your project

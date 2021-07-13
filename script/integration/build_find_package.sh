@@ -29,6 +29,4 @@ cmake --install .
 ##########################
 cd ../install
 ls
-# verify, that cupla lib is correct installed
-ls lib
 bin/cuplaVectorAdd
